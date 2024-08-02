@@ -1,10 +1,16 @@
 import numpy as np
 
+np.random.seed(1)
+
 # Rosenbrock関数
 def rosenbrock(x, y):
     a = 1
     b = 100
     return (a - x)**2 + b * (y - x**2)**2
+
+# n次元対応rosenbrock関数
+def rosenbrock_nd(x):
+    return sum((1-x[i])**2 + 100*(x[i+1] - x[i]**2)**2 for i in range(len(x)-1))
 
 # 遺伝的アルゴリズムのパラメータ
 population_size = 100  # 個体群のサイズ
@@ -13,12 +19,13 @@ mutation_rate = 0.01   # 突然変異率
 crossover_rate = 0.7   # 交叉率
 
 # 初期個体群の生成
-def initialize_population(size):
-    return np.random.uniform(-5, 5, (size, 2))
+def initialize_population(size, dim = 2): 
+    return np.random.uniform(-5, 5, (size, dim)) #-5から5までの範囲の値を持つdim次元の個体をsize個生成
 
 # rosenblock関数の計算
 def fitness(population):
-    return np.array([rosenbrock(ind[0], ind[1]) for ind in population])
+    return np.array([rosenbrock_nd(ind) for ind in population])
+#    return np.array([rosenbrock(ind[0], ind[1]) for ind in population])
 
 # 次世代の親固体の選択
 # トーナメント選択
@@ -32,12 +39,26 @@ def selection(population, fitness_values):
             selected.append(population[j])
     return np.array(selected) #次世代の親固体リスト
 
-# 交叉 (一点交叉)
+# 交叉
 # 2つの固体から新たな固体を生成
+# 一点交叉
 def crossover(parent1, parent2):
     if np.random.rand() < crossover_rate:
         point = np.random.randint(1, len(parent1)) #ランダムな点を選択
         return np.concatenate((parent1[:point], parent2[point:])) #ランダム点で2つを結合
+    else:
+        return parent1
+
+# 一様交叉
+def uniform_crossover(parent1, parent2):
+    if np.random.rand() < crossover_rate:
+        child = np.empty_like(parent1)
+        for i in range(len(parent1)): # 各遺伝子について0.5の確率で別の親から持ってくる
+            if np.random.rand() < 0.5:
+                child[i] = parent1[i]
+            else:
+                child[i] = parent2[i]
+        return child
     else:
         return parent1
 
@@ -48,7 +69,7 @@ def mutate(individual):
             individual[i] += np.random.normal(0, 1)
     return individual
 
-# 遺伝的アルゴリズムの実行
+# 遺伝的アルゴリズム
 def genetic_algorithm():
     population = initialize_population(population_size)
     for generation in range(generations):
@@ -57,8 +78,10 @@ def genetic_algorithm():
         new_population = []
         for i in range(0, len(population), 2):
             parent1, parent2 = population[i], population[i+1]
-            offspring1 = crossover(parent1, parent2)
-            offspring2 = crossover(parent2, parent1)
+            offspring1 = uniform_crossover(parent1, parent2)
+            #offspring1 = crossover(parent1, parent2)
+            offspring2 = uniform_crossover(parent2, parent1)
+            #offspring2 = crossover(parent2, parent1)
             new_population.append(mutate(offspring1))
             new_population.append(mutate(offspring2))
         population = np.array(new_population)
@@ -66,6 +89,7 @@ def genetic_algorithm():
         print(f"Generation {generation}: Best Fitness = {best_fitness}")
     best_individual = population[np.argmin(fitness(population))]
     return best_individual
+
 
 best_solution = genetic_algorithm()
 print(f"Best Solution: {best_solution}, Fitness: {rosenbrock(best_solution[0], best_solution[1])}")
